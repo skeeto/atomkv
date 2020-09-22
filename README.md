@@ -7,7 +7,7 @@ own JavaScript library, so any page on any domain can use it seamlessly.
 Keys are hierarchical, always begin with a slash, and never end with a
 slash. Components between slashes are limited to letters, numbers, dash,
 and underscore. Listeners can monitor a specific key or all keys rooted
-under key space. Each key-value has a revision number which starts at
+under a key space. Each key-value has a revision number which starts at
 zero and increments by one for each update.
 
 ## Usage
@@ -28,7 +28,7 @@ with the following functions (with TypeScript-like notation):
 AtomKV.get = async function(key: string): [any, number]
 
 /**
- * Forcefully set the given key to the specific value serializable for JSON.
+ * Forcefully assign a key to a JSON-serializable value.
  */
 AtomKV.set = async function(key: string, value: any)
 
@@ -44,10 +44,12 @@ AtomKV.update = async function(key: string, value: any, revision: number): boole
  * Returns an asynchronous generator of update events for the given key
  * path. If the key path ends with a slash, it will monitor the entire
  * hierarchy under that path. Each yield returns the key, value, and
- * reivison number.
+ * revision number. Typically used in a "for await" statement.
  */
 AtomKV.subscribe = async function*(keypath: string): [string, any, number]
 ```
+
+### JavaScript examples
 
 The following example iterates the Fibonacci state at `/fib`. This is
 safe for multiple concurrent clients because of the compare-and-swap
@@ -80,19 +82,15 @@ async function monitor(session) {
     }
 }
 
-function generate_id() {
-    return Math.floor(Math.random()*0xffffffff).toString(16)
-}
-
-let SESSION_ID = generate_id()
+let SESSION_ID = Math.floor(Math.random() * 0xffffffff).toString(16)
 console.log(`SESSIONID = ${SESSION_ID}`)
 monitor(SESSION_ID)
 ```
 
 ## HTTP API (low level)
 
-There's really just one endpoint, `/`, which response to different
-methods.
+There's really just one endpoint, `/`, which responds differently to
+different methods.
 
 ### `GET /`
 
@@ -108,8 +106,7 @@ header indicates the revision number.
 
 If the `Accept` header indicates `text/event-stream` then the request
 will use [Server-sent Events][sse]. If the path ends in a slash, all
-keys under that path are monitored. Note that it is not possible to
-monitor `/`.
+keys under that path are monitored. It is not possible to monitor `/`.
 
 The `data` field for each event is the JSON-encoded value, and the `id`
 field is `/path/to/key:revision`. Keys cannot contain a colon, so this
@@ -118,14 +115,14 @@ is trivial to parse.
 ### `POST /path/to/key`
 
 Forcefully overwrite the key with a JSON-encoded value. This always
-succeeds so long as the key is valid.
+succeeds for valid keys.
 
 ### `PUT /path/to/key`
 
 Attempt to store a new JSON-encoded value under the given key. An
 `X-Revision` header *must* be supplied, indicating the assumed new
-revision number — which is one more than the last observed revision. It
-only succeeds if the expected revision number matches.
+revision number — one more than the last observed revision. It only
+succeeds if the expected revision number matches.
 
 
 [cors]: https://developer.mozilla.org/en-US/docs/Glossary/CORS
